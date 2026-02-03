@@ -70,6 +70,7 @@ import org.fdroid.repo.Adding
 import org.fdroid.repo.FetchResult
 import org.fdroid.repo.Fetching
 import org.fdroid.repo.None
+import android.util.Log
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -149,6 +150,7 @@ fun AddRepoIntroContent(paddingValues: PaddingValues, onFetchRepo: (String) -> U
             stringResource(R.string.repo_scan_qr_code),
             imageVector = Icons.Filled.QrCode,
             onClick = {
+                Log.d("FDroidDebug", "Button clicked, before fetch")  // 新增：调试日志
                 startForResult.launch(ScanOptions().apply {
                     setPrompt("")
                     setBeepEnabled(true)
@@ -185,49 +187,47 @@ fun AddRepoIntroContent(paddingValues: PaddingValues, onFetchRepo: (String) -> U
         }
         val textState = remember { mutableStateOf(TextFieldValue()) }
         val focusRequester = remember { FocusRequester() }
-        AnimatedVisibility(visible = manualExpanded) {
-            Column(
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = spacedBy(16.dp),
+        Column(
+            horizontalAlignment = Alignment.End,
+            verticalArrangement = spacedBy(16.dp),
+        ) {
+            TextField(
+                value = textState.value,
+                minLines = 2,
+                onValueChange = { textState.value = it },
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
+                keyboardActions = KeyboardActions(
+                    onGo = {
+                        onFetchRepo(textState.value.text)
+                    },
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(focusRequester)
+                    .onGloballyPositioned {
+                        focusRequester.requestFocus()
+                    },
+            )
+            Row(
+                horizontalArrangement = spacedBy(16.dp),
+                verticalAlignment = CenterVertically,
             ) {
-                TextField(
-                    value = textState.value,
-                    minLines = 2,
-                    onValueChange = { textState.value = it },
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
-                    keyboardActions = KeyboardActions(
-                        onGo = {
-                            onFetchRepo(textState.value.text)
-                        },
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .focusRequester(focusRequester)
-                        .onGloballyPositioned {
-                            focusRequester.requestFocus()
-                        },
+                val clipboardManager = LocalClipboardManager.current
+                FDroidOutlineButton(
+                    stringResource(id = R.string.paste),
+                    imageVector = Icons.Default.ContentPaste,
+                    onClick = {
+                        if (clipboardManager.hasText()) {
+                            textState.value =
+                                TextFieldValue(clipboardManager.getText()?.text ?: "")
+                        }
+                    },
                 )
-                Row(
-                    horizontalArrangement = spacedBy(16.dp),
-                    verticalAlignment = CenterVertically,
-                ) {
-                    val clipboardManager = LocalClipboardManager.current
-                    FDroidOutlineButton(
-                        stringResource(id = R.string.paste),
-                        imageVector = Icons.Default.ContentPaste,
-                        onClick = {
-                            if (clipboardManager.hasText()) {
-                                textState.value =
-                                    TextFieldValue(clipboardManager.getText()?.text ?: "")
-                            }
-                        },
-                    )
-                    Spacer(modifier = Modifier.weight(1f))
-                    FDroidButton(
-                        text = stringResource(R.string.repo_add_add),
-                        onClick = { onFetchRepo(textState.value.text) },
-                    )
-                }
+                Spacer(modifier = Modifier.weight(1f))
+                FDroidButton(
+                    text = stringResource(R.string.repo_add_add),
+                    onClick = { onFetchRepo(textState.value.text) },
+                )
             }
         }
     }
