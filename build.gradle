@@ -2,6 +2,10 @@ buildscript {
     repositories {
         mavenCentral()
         maven { url 'https://maven.google.com/' }
+        maven { url '/opt/android-plugin' }
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:7.4.0-dev'
     }
 }
 plugins {
@@ -18,6 +22,7 @@ allprojects {
     repositories {
         mavenCentral()
         maven { url 'https://maven.google.com/' }
+        maven { url '/opt/android-plugin' }
     }
     // use new Sonatype server for mavenCentral publishing
     plugins.withId("com.vanniktech.maven.publish") {
