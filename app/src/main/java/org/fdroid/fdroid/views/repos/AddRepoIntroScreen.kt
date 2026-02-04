@@ -2,9 +2,7 @@ package org.fdroid.fdroid.views.repos
 
 import android.content.res.Configuration.UI_MODE_NIGHT_YES
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement.SpaceBetween
 import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,19 +11,16 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.QrCode
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -35,20 +30,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterHorizontally
-import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
@@ -84,7 +70,6 @@ fun AddRepoIntroScreen(
         when (state.fetchResult) {
             is FetchResult.IsNewMirror,
             is FetchResult.IsExistingMirror -> stringResource(R.string.repo_add_mirror)
-
             else -> stringResource(R.string.repo_add_new_title)
         }
     } else {
@@ -99,9 +84,7 @@ fun AddRepoIntroScreen(
                 }
             },
             title = {
-                Text(
-                    text = appBarTitle,
-                )
+                Text(text = appBarTitle)
             },
         )
     }) { paddingValues ->
@@ -118,7 +101,6 @@ fun AddRepoIntroScreen(
                     )
                 }
             }
-
             Adding -> RepoProgressScreen(paddingValues, stringResource(R.string.repo_state_adding))
             is Added -> Box(modifier = Modifier.padding(paddingValues)) // empty UI
             is AddRepoError -> AddRepoErrorScreen(paddingValues, state)
@@ -129,13 +111,13 @@ fun AddRepoIntroScreen(
 @Composable
 fun AddRepoIntroContent(paddingValues: PaddingValues, onFetchRepo: (String) -> Unit) {
     Column(
-        verticalArrangement = spacedBy(16.dp),
+        verticalArrangement = spacedBy(24.dp),          // 稍微加大间距，更清晰
         horizontalAlignment = CenterHorizontally,
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp)
-            .padding(paddingValues),
+            .padding(horizontal = 24.dp, vertical = 16.dp)
+            .padding(paddingValues)
     ) {
         Text(
             text = stringResource(R.string.repo_intro),
@@ -149,65 +131,71 @@ fun AddRepoIntroContent(paddingValues: PaddingValues, onFetchRepo: (String) -> U
         }
 
         FDroidButton(
-            stringResource(R.string.repo_scan_qr_code),
+            text = stringResource(R.string.repo_scan_qr_code),
             imageVector = Icons.Filled.QrCode,
             onClick = {
                 Log.d("FDroidDebug", "QR Scan button clicked")
-                startForResult.launch(ScanOptions().apply {
-                    setPrompt("")
-                    setBeepEnabled(true)
-                    setOrientationLocked(false)
-                    setDesiredBarcodeFormats(QR_CODE)
-                    addExtra(SCAN_TYPE, MIXED_SCAN)
-                })
+                startForResult.launch(
+                    ScanOptions().apply {
+                        setPrompt("")
+                        setBeepEnabled(true)
+                        setOrientationLocked(false)
+                        setDesiredBarcodeFormats(QR_CODE)
+                        addExtra(SCAN_TYPE, MIXED_SCAN)
+                    }
+                )
             },
         )
 
-        // 移除 clickable Row 和 manualExpanded 状态，直接始终显示输入区
+        // 标题文字 - 始终显示，无需折叠
         Text(
             text = stringResource(R.string.repo_enter_url),
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.titleMedium,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 16.dp),
+                .padding(top = 8.dp)
         )
 
         val textState = remember { mutableStateOf(TextFieldValue()) }
-        val focusRequester = remember { FocusRequester() }
 
         TextField(
             value = textState.value,
-            minLines = 2,
             onValueChange = { textState.value = it },
+            minLines = 2,
+            maxLines = 4,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
             keyboardActions = KeyboardActions(
-                onGo = { onFetchRepo(textState.value.text) }
+                onGo = { onFetchRepo(textState.value.text.trim()) }
             ),
             modifier = Modifier
                 .fillMaxWidth()
-                .focusRequester(focusRequester)
-                .onGloballyPositioned { focusRequester.requestFocus() },
+                // 故意不加 focusRequester 和 onGloballyPositioned
+                // 用户点击输入框即可获得焦点，减少初始 layout pass
         )
 
         Row(
             horizontalArrangement = spacedBy(16.dp),
-            verticalAlignment = CenterVertically,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth()
         ) {
             val clipboardManager = LocalClipboardManager.current
+
             FDroidOutlineButton(
-                stringResource(R.string.paste),
+                text = stringResource(R.string.paste),
                 imageVector = Icons.Default.ContentPaste,
                 onClick = {
                     if (clipboardManager.hasText()) {
-                        textState.value = TextFieldValue(clipboardManager.getText()?.text ?: "")
+                        textState.value = TextFieldValue(
+                            clipboardManager.getText()?.text?.trim() ?: ""
+                        )
                     }
                 },
+                modifier = Modifier.weight(1f)
             )
-            Spacer(modifier = Modifier.weight(1f))
+
             FDroidButton(
                 text = stringResource(R.string.repo_add_add),
-                onClick = { onFetchRepo(textState.value.text) },
+                onClick = { onFetchRepo(textState.value.text.trim()) },
+                modifier = Modifier.weight(1f)
             )
         }
     }
