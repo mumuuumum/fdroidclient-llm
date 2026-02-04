@@ -27,7 +27,6 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.google.android.material.color.MaterialColors
-import androidx.compose.foundation.shape.RectangleShape
 
 object ComposeUtils {
 
@@ -40,7 +39,7 @@ object ComposeUtils {
     ) {
         Button(
             onClick = onClick,
-            shape = RectangleShape,
+            shape = RoundedCornerShape(0.dp),
             modifier = modifier.heightIn(min = ButtonDefaults.MinHeight)
         ) {
             if (imageVector != null) {
@@ -65,7 +64,7 @@ object ComposeUtils {
     ) {
         OutlinedButton(
             onClick = onClick,
-            shape = RectangleShape,
+            shape = RoundedCornerShape(0.dp),
             modifier = modifier.heightIn(min = ButtonDefaults.MinHeight),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = color),
         ) {
