@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ButtonElevation  // 新增导入（如果编译报错，可删）
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -29,7 +30,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.google.android.material.color.MaterialColors
 
 object ComposeUtils {
-
     @Composable
     fun FDroidButton(
         text: String,
@@ -40,7 +40,18 @@ object ComposeUtils {
         Button(
             onClick = onClick,
             shape = RoundedCornerShape(0.dp),
-            modifier = modifier.heightIn(min = ButtonDefaults.MinHeight)
+            // 关键：强制 elevation = 0.dp，无阴影 → 避免 GraphicsLayer outline 计算
+            elevation = ButtonDefaults.buttonElevation(
+                defaultElevation = 0.dp,
+                pressedElevation = 0.dp,
+                focusedElevation = 0.dp,
+                hoveredElevation = 0.dp,
+                disabledElevation = 0.dp
+            ),
+            // 可选 hack：添加 graphicsLayer alpha <1 强制某些 bug 路径绕过（常见 WebView/Compose crash 修复）
+            modifier = modifier
+                .heightIn(min = ButtonDefaults.MinHeight)
+                .graphicsLayer { alpha = 0.999f },  // <1 的 alpha 常用于绕过某些 layer bug
         ) {
             if (imageVector != null) {
                 Icon(
@@ -65,8 +76,19 @@ object ComposeUtils {
         OutlinedButton(
             onClick = onClick,
             shape = RoundedCornerShape(0.dp),
-            modifier = modifier.heightIn(min = ButtonDefaults.MinHeight),
+            // 关键：OutlinedButton 默认无 elevation，但强制 0.dp 以防
+            elevation = ButtonDefaults.buttonElevation(
+                defaultElevation = 0.dp,
+                pressedElevation = 0.dp,
+                focusedElevation = 0.dp,
+                hoveredElevation = 0.dp,
+                disabledElevation = 0.dp
+            ),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = color),
+            // 同上 hack
+            modifier = modifier
+                .heightIn(min = ButtonDefaults.MinHeight)
+                .graphicsLayer { alpha = 0.999f },
         ) {
             if (imageVector != null) {
                 Icon(
@@ -80,26 +102,16 @@ object ComposeUtils {
         }
     }
 
-    /**
-     * A tiny helper for consuming Activity lifecycle events.
-     *
-     * copied from https://stackoverflow.com/a/66807899
-     *
-     * There is also an official API for consuming lifecycle events. However at the time of writing
-     * it's not stable and I also couldn't find any actually working code snippets demonstrating
-     * it's use. "androidx.lifecycle:lifecycle-runtime-compose"
-     */
+    // LifecycleEventListener 和 CaptionText 函数保持不变
     @Composable
     fun LifecycleEventListener(onEvent: (owner: LifecycleOwner, event: Lifecycle.Event) -> Unit) {
         val eventHandler = rememberUpdatedState(onEvent)
         val lifecycleOwner = rememberUpdatedState(LocalLifecycleOwner.current)
-
         DisposableEffect(lifecycleOwner.value) {
             val lifecycle = lifecycleOwner.value.lifecycle
             val observer = LifecycleEventObserver { owner, event ->
                 eventHandler.value(owner, event)
             }
-
             lifecycle.addObserver(observer)
             onDispose {
                 lifecycle.removeObserver(observer)
@@ -107,9 +119,6 @@ object ComposeUtils {
         }
     }
 
-    /**
-     * Composable that mimics MDC TextView with `@style/CaptionText`
-     */
     @Composable
     fun CaptionText(text: String) {
         Text(

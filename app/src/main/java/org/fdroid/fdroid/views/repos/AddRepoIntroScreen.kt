@@ -141,16 +141,18 @@ fun AddRepoIntroContent(paddingValues: PaddingValues, onFetchRepo: (String) -> U
             text = stringResource(R.string.repo_intro),
             style = MaterialTheme.typography.bodyLarge,
         )
+
         val startForResult = rememberLauncherForActivityResult(ScanContract()) { result ->
             if (result.contents != null) {
                 onFetchRepo(result.contents)
             }
         }
+
         FDroidButton(
             stringResource(R.string.repo_scan_qr_code),
             imageVector = Icons.Filled.QrCode,
             onClick = {
-                Log.d("FDroidDebug", "Button clicked, before fetch")  // 新增：调试日志
+                Log.d("FDroidDebug", "QR Scan button clicked")
                 startForResult.launch(ScanOptions().apply {
                     setPrompt("")
                     setBeepEnabled(true)
@@ -160,75 +162,53 @@ fun AddRepoIntroContent(paddingValues: PaddingValues, onFetchRepo: (String) -> U
                 })
             },
         )
-        val isPreview = LocalInspectionMode.current
-        var manualExpanded by rememberSaveable { mutableStateOf(isPreview) }
-        Row(
-            horizontalArrangement = SpaceBetween,
-            verticalAlignment = CenterVertically,
+
+        // 移除 clickable Row 和 manualExpanded 状态，直接始终显示输入区
+        Text(
+            text = stringResource(R.string.repo_enter_url),
+            style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = ButtonDefaults.MinHeight)
-                .clickable { manualExpanded = !manualExpanded },
-        ) {
-            Text(
-                text = stringResource(R.string.repo_enter_url),
-                style = MaterialTheme.typography.bodyMedium,
-                // avoid occupying the whole row
-                modifier = Modifier.weight(1f),
-            )
-            Icon(
-                imageVector = if (manualExpanded) {
-                    Icons.Default.ArrowDropUp
-                } else {
-                    Icons.Default.ArrowDropDown
-                },
-                contentDescription = null,
-            )
-        }
+                .padding(top = 16.dp),
+        )
+
         val textState = remember { mutableStateOf(TextFieldValue()) }
         val focusRequester = remember { FocusRequester() }
-        Column(
-            horizontalAlignment = Alignment.End,
-            verticalArrangement = spacedBy(16.dp),
+
+        TextField(
+            value = textState.value,
+            minLines = 2,
+            onValueChange = { textState.value = it },
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
+            keyboardActions = KeyboardActions(
+                onGo = { onFetchRepo(textState.value.text) }
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(focusRequester)
+                .onGloballyPositioned { focusRequester.requestFocus() },
+        )
+
+        Row(
+            horizontalArrangement = spacedBy(16.dp),
+            verticalAlignment = CenterVertically,
+            modifier = Modifier.fillMaxWidth(),
         ) {
-            TextField(
-                value = textState.value,
-                minLines = 2,
-                onValueChange = { textState.value = it },
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
-                keyboardActions = KeyboardActions(
-                    onGo = {
-                        onFetchRepo(textState.value.text)
-                    },
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(focusRequester)
-                    .onGloballyPositioned {
-                        focusRequester.requestFocus()
-                    },
+            val clipboardManager = LocalClipboardManager.current
+            FDroidOutlineButton(
+                stringResource(R.string.paste),
+                imageVector = Icons.Default.ContentPaste,
+                onClick = {
+                    if (clipboardManager.hasText()) {
+                        textState.value = TextFieldValue(clipboardManager.getText()?.text ?: "")
+                    }
+                },
             )
-            Row(
-                horizontalArrangement = spacedBy(16.dp),
-                verticalAlignment = CenterVertically,
-            ) {
-                val clipboardManager = LocalClipboardManager.current
-                FDroidOutlineButton(
-                    stringResource(id = R.string.paste),
-                    imageVector = Icons.Default.ContentPaste,
-                    onClick = {
-                        if (clipboardManager.hasText()) {
-                            textState.value =
-                                TextFieldValue(clipboardManager.getText()?.text ?: "")
-                        }
-                    },
-                )
-                Spacer(modifier = Modifier.weight(1f))
-                FDroidButton(
-                    text = stringResource(R.string.repo_add_add),
-                    onClick = { onFetchRepo(textState.value.text) },
-                )
-            }
+            Spacer(modifier = Modifier.weight(1f))
+            FDroidButton(
+                text = stringResource(R.string.repo_add_add),
+                onClick = { onFetchRepo(textState.value.text) },
+            )
         }
     }
 }
